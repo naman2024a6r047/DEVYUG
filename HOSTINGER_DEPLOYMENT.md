@@ -1,94 +1,101 @@
-# Hostinger Deployment Guide - DVYUG
+# Hostinger Deployment Guide - DVYUG (Single Domain)
 
-This guide explains how to deploy the DVYUG full-stack application (Next.js 15 frontend + Express.js backend + MySQL Database) on **Hostinger Business Hosting** (hPanel).
+This guide explains how to deploy the entire DVYUG platform (Next.js storefront + Express API + MySQL database) under a **single domain** (e.g. `yourdomain.com`) without needing subdomains.
 
 ---
 
-## 1. MySQL Database Sourcing on Hostinger
+## 1. Local Build Phase (Your Computer)
 
-Hostinger Business Hosting provides free managed MySQL databases. We will use them to back Prisma.
+First, build both projects locally to generate the production JavaScript assets:
+
+1. Open your terminal in the project root folder.
+2. Build the project:
+   ```bash
+   # Compiles backend TypeScript to JS
+   npm run build:backend
+
+   # Compiles Next.js frontend to standalone build
+   npm run build:frontend
+   ```
+
+---
+
+## 2. MySQL Database Setup (Hostinger hPanel)
 
 1. Log into your **Hostinger hPanel**.
-2. Navigate to **Databases** > **MySQL Databases**.
-3. Create a new database and database user:
+2. Go to **Databases** > **MySQL Databases**.
+3. Create a new database and user:
    - **Database Name:** e.g., `u123456789_dvyug`
    - **MySQL Username:** e.g., `u123456789_dvyug_user`
-   - **Password:** Choose a strong password.
-4. Once created, note the connection details. Usually, Hostinger's database host is `localhost` (if your Node.js application runs on the same server) or an external IP.
-5. In your `/backend/.env` file, specify:
-   ```env
-   DATABASE_URL="mysql://u123456789_dvyug_user:your_password@localhost:3306/u123456789_dvyug"
-   ```
+   - **Password:** Create a strong password.
+4. Save the generated credentials.
 
 ---
 
-## 2. Deploying Express.js API on Subdomain
+## 3. Uploading Code to Hostinger `/public_html`
 
-Since Hostinger runs Node.js applications by binding them to ports, running both the Next.js and Express servers on the same domain requires assigning one to a subdomain (e.g. `api.yourdomain.com` for Express).
+Using hPanel File Manager or FTP, structure your files inside the main domain root `/public_html` exactly like this:
 
-1. In hPanel, go to **Domains** > **Subdomains** and create `api.yourdomain.com`.
-2. Navigate to **Advanced** > **Node.js** app manager on hPanel.
-3. Create a new Node.js application:
-   - **Domain/Subdomain:** `api.yourdomain.com`
-   - **App Directory:** `/domains/api.yourdomain.com/public_html`
-   - **App Version:** Choose **Node.js 20 or 22**.
-   - **Application Startup File:** Set to `dist/index.js` (compiled from `src/index.ts`).
-4. Upload the `/backend` codebase to `/domains/api.yourdomain.com/public_html` using the hPanel File Manager or FTP.
-5. In the backend directory, run:
-   ```bash
-   npm install --production
-   npx prisma generate
-   npx prisma db push
-   npx prisma db seed
-   npm run build
-   ```
-6. Click **Start App** in the Node.js hPanel dashboard. Your backend will now be live on `https://api.yourdomain.com/api/health`.
-
----
-
-## 3. Deploying Next.js 15 Frontend on Main Domain
-
-Next.js 15 can be deployed in **Standalone mode**, which outputs a highly optimized Node.js server that runs efficiently on Hostinger.
-
-### Step 1: Configure Standalone Output
-In `/frontend/next.config.ts`, add the `output` parameter:
-```typescript
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
-  output: 'standalone', // Enables standalone production packaging
-};
-
-export default nextConfig;
+```
+/public_html
+ ├── backend/
+ │    ├── dist/            (compiled JS folder)
+ │    ├── prisma/          (Prisma schema folder)
+ │    ├── package.json
+ │    └── package-lock.json
+ ├── frontend/
+ │    ├── .next/           (upload contents of frontend/.next/standalone/frontend/.next/)
+ │    ├── node_modules/    (upload contents of frontend/.next/standalone/frontend/node_modules/)
+ │    ├── package.json     (upload contents of frontend/.next/standalone/frontend/package.json)
+ │    └── server.js        (upload contents of frontend/.next/standalone/frontend/server.js)
+ ├── launcher.js           (The single startup script)
+ └── .env                  (Your database and app credentials)
 ```
 
-### Step 2: Build locally and Upload
-1. Set the production environment variables in `/frontend/.env.production`:
-   ```env
-   NEXT_PUBLIC_API_URL="https://api.yourdomain.com/api"
-   ```
-2. Run `npm run build` in the `/frontend` directory. Next.js creates:
-   - A standalone folder under `/.next/standalone`.
-   - A static files folder under `/.next/static`.
-3. Compress and upload:
-   - Copy the contents of `/.next/standalone` (which contains a minimal Node server `server.js`) to your Hostinger main domain root: `/public_html`.
-   - Copy the `public` folder and the `/.next/static` folder to `/public_html/.next/static` so the server can resolve styles and images.
-
-### Step 3: Run on Hostinger App Manager
-1. In hPanel **Node.js Manager**, create a Node.js application for your main domain:
-   - **App Directory:** `/public_html`
-   - **Startup File:** `server.js`
-2. Click **Start App**. Next.js will boot up and bind to your main domain!
+### Detailed steps:
+1. Upload the entire `backend/` directory from your computer (skip `backend/node_modules/` and `backend/src/`).
+2. Create a folder named `frontend/` in `/public_html`. Upload all files **inside** `frontend/.next/standalone/frontend/` directly into this new `/public_html/frontend/` folder.
+3. Upload `launcher.js` from the project root directly into `/public_html/launcher.js`.
 
 ---
 
-## 4. Verification Checklists
+## 4. Environment Variables Setup
 
-Ensure the environment variables are active on both applications:
-- **Backend Environment Variables:**
-  - `PORT` (Provided automatically by Hostinger)
-  - `DATABASE_URL` (Hostinger MySQL connection string)
-  - `JWT_SECRET` (A strong custom string)
-  - `FRONTEND_URL` (`https://yourdomain.com`)
-- **Frontend Environment Variables:**
-  - `NEXT_PUBLIC_API_URL` (`https://api.yourdomain.com/api`)
+Create a new file named `.env` in the root of `/public_html` containing the following credentials:
+
+```env
+# Database Credentials
+DATABASE_URL="mysql://u123456789_dvyug_user:YOUR_PASSWORD@localhost:3306/u123456789_dvyug"
+
+# API Token Secret
+JWT_SECRET="YOUR_SECURE_RANDOM_SECRET"
+
+# Hostinger Domain
+FRONTEND_URL="https://yourdomain.com"
+```
+
+---
+
+## 5. Hostinger Node.js Application Manager Setup
+
+1. Go to hPanel > **Advanced** > **Node.js**.
+2. Select your main domain: **`yourdomain.com`**.
+3. Configure settings:
+   - **App Directory:** `/public_html`
+   - **Startup File:** **`launcher.js`**
+   - **Node Version:** Choose **Node.js 20** (or latest).
+4. Click **Install** / **Save**.
+5. Once saved, open the terminal console in your hPanel Node.js dashboard (or connect via SSH) and run:
+   ```bash
+   # Install dependencies for the launcher, backend, and frontend
+   npm install --production
+   npm run postinstall --prefix backend
+
+   # Push table migrations and seed the data
+   npx prisma db push --schema=backend/prisma/schema.prisma
+   npm run prisma:seed --prefix backend
+   ```
+6. Click **Start App** on the hPanel Node.js manager dashboard.
+
+### 🌟 Verify:
+Navigate to `https://yourdomain.com/` in your browser. The Next.js storefront will load, and any `/api/*` calls will automatically be proxied locally to the Express backend running in the background.
