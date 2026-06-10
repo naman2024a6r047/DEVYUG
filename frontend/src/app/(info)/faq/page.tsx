@@ -1,0 +1,87 @@
+'use client';
+
+import React, { useState } from 'react';
+import { Sparkles, ChevronDown } from 'lucide-react';
+
+export default function FAQPage() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      q: 'How does your AI Product Recommendation system work?',
+      a: 'Our AI Wellness Recommendation quiz matches your specific inputs (Age, Lifestyle, Goals, and health concerns) against botanical properties and Ayurvedic Dosha rationales stored in our inventory database, providing you with 4 custom recommended items and explanations.',
+      category: 'Advanced Features'
+    },
+    {
+      q: 'What makes Gir cow Bilona Ghee different from commercial ghee?',
+      a: 'Commercial ghee is often extracted using high heat and centrifugal force directly from raw cream. Our Vedic A2 Gir Cow Ghee is handcrafted using the ancient Bilona method: boiling milk, culturing it into curd, and then churning it slowly with wooden logs to separate butter before cooking. This preserves active CLA and vitamins.',
+      category: 'Product Sourcing'
+    },
+    {
+      q: 'How do I earn and spend Loyalty Points?',
+      a: 'You earn loyalty points on every purchase (10% of order value back as points). You also receive points when signing up via referral links (+50 points). Points can be redeemed as cash discount at checkout (1 point = ₹1 INR off).',
+      category: 'Loyalty Program'
+    },
+    {
+      q: 'Can I cancel or pause my monthly wellness subscriptions?',
+      a: 'Yes! You have full flexibility. Log into your User Dashboard under "My Subscriptions" to pause or cancel any active recurring pack at any time before the next scheduled billing cycle.',
+      category: 'Subscriptions'
+    },
+    {
+      q: 'What is your shipping time and return policy?',
+      a: 'We deliver all over India. Orders above ₹499 qualify for free delivery (Standard takes 3-5 days). We offer a 7-day hassle-free return policy on unused, sealed items if they arrive damaged or incorrect.',
+      category: 'Shipping & Returns'
+    }
+  ];
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 space-y-10 font-sans">
+      
+      {/* Header info */}
+      <div className="text-center space-y-2">
+        <span className="text-[10px] font-bold text-[#C9A227] tracking-widest uppercase flex items-center justify-center gap-1">
+          <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+          Resolve Queries
+        </span>
+        <h1 className="text-3xl font-serif font-bold text-[#2D5A27]">Frequently Asked Questions</h1>
+        <div className="h-0.5 w-16 bg-[#C9A227] mx-auto" />
+        <p className="text-xs text-[#2B2B2B]/60 font-light leading-relaxed">
+          Quickly inspect typical questions regarding ingredients sourcing, AI recommender logic, and ordering mechanics.
+        </p>
+      </div>
+
+      {/* Accordions */}
+      <div className="space-y-4 pt-6">
+        {faqs.map((faq, idx) => {
+          const isOpen = openIndex === idx;
+          return (
+            <div 
+              key={idx} 
+              className="bg-white border border-[#F5EFE2] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+            >
+              <button
+                onClick={() => setOpenIndex(isOpen ? null : idx)}
+                className="w-full text-left px-6 py-4 flex justify-between items-center gap-4 transition-colors hover:bg-[#FAF8F2]"
+              >
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-[#C9A227] tracking-widest block mb-0.5">
+                    {faq.category}
+                  </span>
+                  <h3 className="text-sm font-serif font-bold text-[#2B2B2B]">{faq.q}</h3>
+                </div>
+                <ChevronDown className={`w-4 h-4 text-[#2D5A27] transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isOpen && (
+                <div className="px-6 pb-6 pt-1 text-xs text-[#2B2B2B]/85 font-light leading-relaxed border-t border-[#FAF8F2] bg-[#FAF8F2]/30 animate-fade-in">
+                  {faq.a}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+}

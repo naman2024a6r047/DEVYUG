@@ -1,0 +1,174 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+  RETURNED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  passwordHash  String?
+  role          Role          @default(USER)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  profile       Profile?
+  orders        Order[]
+  reviews       Review[]
+  subscriptions Subscription[]
+  cartItems     CartItem[]
+  wishlist      WishlistItem[]
+}
+
+model Profile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone          String?
+  addressLine1   String?
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?  @default("India")
+  loyaltyPoints  Int      @default(0)
+  referralCode   String   @unique
+  referredBy     String?
+}
+
+model Product {
+  id                  String         @id @default(uuid())
+  name                String
+  slug                String         @unique
+  description         String         @db.Text
+  price               Float
+  salePrice           Float?
+  stock               Int            @default(10)
+  category            String         // "Herbal Products", "Organic Food", "Spiritual Essentials", "Personal Care", "Puja Essentials", "Gift Sets"
+  subCategory         String?
+  ratings             Float          @default(0)
+  images              Json           // Store image URLs array as JSON in MySQL
+  videoUrl            String?
+  ingredients         Json           // Store ingredients array as JSON
+  benefits            Json           // Store benefits array as JSON
+  usageInstructions   String?        @db.Text
+  ayurvedicProperties String?        @db.Text
+  isBestSeller        Boolean        @default(false)
+  isFeatured          Boolean        @default(false)
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  orderItems          OrderItem[]
+  reviews             Review[]
+  cartItems           CartItem[]
+  wishlistItems       WishlistItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalAmount     Float
+  status          OrderStatus @default(PENDING)
+  shippingAddress String      @db.Text
+  paymentMethod   String      // "Razorpay", "UPI", "Card", "NetBanking", "COD"
+  paymentStatus   String      // "PENDING", "PAID", "FAILED"
+  paymentId       String?     // Transaction reference
+  couponCode      String?
+  pointsEarned    Int         @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+  price     Float
+}
+
+model Subscription {
+  id               String             @id @default(uuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planName         String             // "Herbal Tea Kit", "Daily Wellness Pack", "Monthly Puja Kit"
+  frequency        String             @default("Monthly")
+  nextDeliveryDate DateTime
+  status           SubscriptionStatus @default(ACTIVE)
+  price            Float
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model BlogPost {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  content     String        @db.Text
+  category    String        // "Ayurveda", "Organic Living", "Spirituality", "Yoga", "Herbal Remedies"
+  author      String        @default("DVYUG Acharya")
+  image       String
+  createdAt   DateTime      @default(now())
+  comments    BlogComment[]
+}
+
+model BlogComment {
+  id         String   @id @default(uuid())
+  postId     String
+  blogPost   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorName String
+  content    String   @db.Text
+  createdAt  DateTime @default(now())
+}
