@@ -1,4 +1,7 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = typeof window !== 'undefined'
+  ? (process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api' : '/api')
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api');
+
 
 // Utility helper to construct headers with auth token if available
 const getHeaders = (isJson = true) => {
