@@ -35,8 +35,23 @@ nextApp.prepare().then(() => {
   app.set('trust proxy', 1);
 
   // Setup CORS middleware
+  // In production the Next.js frontend is served by the SAME Express process (same port),
+  // so same-origin API calls don't need CORS. We still configure it broadly for any
+  // external tool access, or in case a separate frontend domain is needed.
+  const allowedOrigins = process.env.NODE_ENV === 'production'
+    ? [process.env.FRONTEND_URL || ''].filter(Boolean)
+    : ['http://localhost:3000', 'http://localhost:5000'];
+
   app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (Postman, server-to-server, same-origin)
+      if (!origin) return callback(null, true);
+      // Allow if the origin matches our list or if no list is configured (dev fallback)
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS policy violation: ${origin} is not allowed`));
+    },
     credentials: true
   }));
 

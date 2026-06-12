@@ -199,25 +199,28 @@ export const createOrder = async (req: AuthenticatedRequest, res: Response, next
     });
 
     // Update user's profile loyalty points & deduct inventory stock
+    // NOTE: Prisma does not allow increment and decrement on the same field in one operation.
+    // We compute the net change and apply a single update with raw arithmetic.
+    const netPointsChange = pointsEarned - pointsDeducted;
+
     await prisma.$transaction([
-      // Deduct stock
+      // Deduct stock for each ordered item
       ...items.map((item: any) =>
         prisma.product.update({
           where: { id: item.productId },
           data: { stock: { decrement: item.quantity } }
         })
       ),
-      // Update points
+      // Update loyalty points with net change (positive = gain, negative = spend)
       prisma.profile.update({
         where: { userId },
         data: {
-          loyaltyPoints: {
-            decrement: pointsDeducted,
-            increment: pointsEarned
-          }
+          loyaltyPoints: netPointsChange >= 0
+            ? { increment: netPointsChange }
+            : { decrement: Math.abs(netPointsChange) }
         }
       }),
-      // Clear Cart items
+      // Clear user's cart after successful order
       prisma.cartItem.deleteMany({ where: { userId } })
     ]);
 

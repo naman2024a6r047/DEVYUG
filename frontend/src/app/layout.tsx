@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   description: 'DVYUG promotes healthy, sustainable, and spiritually aligned living through authentic organic, Ayurvedic, herbal, and Vedic products inspired by ancient Indian wisdom.',
   keywords: 'ayurveda, organic ghee, ashwagandha, herbal tea, spiritual essentials, puja thali, natural skincare, Vedic living, sustainable lifestyle',
   authors: [{ name: 'DVYUG Team' }],
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
   openGraph: {
     title: 'DVYUG | Divine Essentials for Vedic Well-Being',
     description: 'Explore authentic organic, Ayurvedic, and Vedic products crafted with ancient wisdom for contemporary health.',
-    url: 'http://localhost:3000',
+    url: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     siteName: 'DVYUG',
     images: [
       {

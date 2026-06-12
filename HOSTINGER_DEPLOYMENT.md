@@ -1,99 +1,173 @@
-# Hostinger Custom Server Deployment Guide - DVYUG
-
-This guide explains how to deploy the unified DVYUG platform (Express.js main server + Next.js App Router + Prisma ORM + MySQL) under a **single domain** and **single Node process** on **Hostinger Business Hosting**.
-
----
-
-## 1. How the Architecture Works
-*   **Primary Server:** The Express server acts as the master process listening on the port provided by Hostinger (`process.env.PORT`).
-*   **Mounted Storefront:** Next.js is loaded programmatically using `next`'s custom server constructor (`app.prepare()` and `handle()`).
-*   **Routing Hierarchy:**
-    *   `/api/*` requests hit the Express Router controllers.
-    *   All other paths `/*` are forwarded to the Next.js App Router handler.
-*   **Prisma Client:** Optimized with a strict singleton pattern to prevent database connection exhaustion during restarts.
+# Hostinger Deployment Guide — DVYUG
+**Architecture:** Express.js (API) + Next.js (Storefront) — Unified single Node.js process on one port.
 
 ---
 
-## 2. Local Compile Phase (Your Computer)
-Because Hostinger shared instances restrict compiler resource usage, compile the TypeScript code locally:
-
-1. Open your terminal in the workspace root directory and run:
-   ```bash
-   # Compiles Next.js storefront first, followed by Express TypeScript
-   npm run build:all
-   ```
-2. This will generate:
-   *   `frontend/.next/` (NextJS compiled production static assets).
-   *   `backend/dist/` (Express compiled production JavaScript).
-
----
-
-## 3. Database Sourcing (Hostinger hPanel)
-1. Log into your **Hostinger hPanel**.
-2. Go to **Databases** > **MySQL Databases**.
-3. Create a new database and user:
-   *   **Database Name:** e.g., `u123456789_dvyug`
-   *   **MySQL Username:** e.g., `u123456789_dvyug_user`
-   *   **Password:** Choose a strong password.
-4. Note down the full database name, user, and password.
-
----
-
-## 4. File Upload Directory Structure
-Using hPanel File Manager or FTP, upload your compiled codebase to your domain root `/public_html`. Ensure it is structured exactly like this:
+## How it Works
 
 ```
-/public_html
- ├── backend/
- │    ├── dist/            (compiled JS folder)
- │    ├── prisma/          (Prisma schema & seed file)
- │    ├── package.json
- │    ├── package-lock.json
- │    └── .env             (Credentials file)
- └── frontend/
-      ├── .next/           (Next.js compiled output folder)
-      ├── public/          (Next.js static asset images)
-      ├── package.json     
-      └── package-lock.json
+Browser → Hostinger → Node.js (Express on PORT)
+                         ├── /api/*        → Express Router (Prisma + MySQL)
+                         └── /* (all else) → Next.js App Router (React SSR/SSG)
 ```
 
 ---
 
-## 5. Environment Variables Setup (`.env`)
-Create a new file named `.env` inside `/public_html/backend/` with the following variables:
+## Step 1 — Build Locally (on your computer)
+
+Because Hostinger shared hosting restricts compiler resources, **always compile on your computer** and upload the compiled files.
+
+```bash
+# From the project root (DEVYUG/)
+npm run build:all
+```
+
+This produces:
+- `frontend/.next/`  — Next.js compiled output
+- `backend/dist/`    — Express TypeScript compiled to JS
+
+> **If `tsc` fails**, fix the errors before uploading. Never upload with a broken build.
+
+---
+
+## Step 2 — Database Setup (Hostinger hPanel)
+
+1. Log in to **hPanel** → **Databases** → **MySQL Databases**
+2. Create a new database, e.g. `u878206810_devyug`
+3. Create a MySQL user with a strong password
+4. Note down: **Database Name**, **Username**, **Password**
+
+---
+
+## Step 3 — Files to Upload (hPanel File Manager or FTP)
+
+Upload the following to your domain's root directory (`/public_html/`):
+
+```
+/public_html/
+  ├── backend/
+  │    ├── dist/           ← Compiled Express JS (REQUIRED)
+  │    ├── prisma/         ← schema.prisma + seed.ts
+  │    ├── package.json
+  │    ├── package-lock.json
+  │    └── .env            ← PRODUCTION env variables (see Step 4)
+  └── frontend/
+       ├── .next/          ← Compiled Next.js (REQUIRED)
+       ├── public/         ← Static assets
+       ├── package.json
+       └── package-lock.json
+```
+
+> ⚠️ **Do NOT upload:**
+> - `node_modules/` from either folder (will be installed on server)
+> - `backend/src/` (source TypeScript — not needed in production)
+> - `frontend/src/` (source files — not needed in production)
+> - `.env.local` from frontend (not used in production; values baked in at build time)
+
+---
+
+## Step 4 — Production `.env` File
+
+Inside `/public_html/backend/`, create (or update) the `.env` file with these **EXACT** values:
 
 ```env
-# Database connection string (runs locally on Hostinger node)
-DATABASE_URL="mysql://u123456789_dvyug_user:YOUR_PASSWORD@localhost:3306/u123456789_dvyug"
+# ── DATABASE ──────────────────────────────────────────────────────────
+# Replace with your actual Hostinger MySQL credentials
+# If password has special chars (@ $ # etc.), URL-encode them: @ → %40
+DATABASE_URL="mysql://u878206810_devyug_user:YOUR_PASSWORD_HERE@localhost:3306/u878206810_devyug"
 
-# JWT token signature secret
-JWT_SECRET="YOUR_SECURE_JWT_SECRET_PHRASE"
+# ── SERVER ────────────────────────────────────────────────────────────
+# Hostinger will set PORT automatically via the Node.js manager
+# You can leave this as 5000 as a fallback
+PORT=5000
 
-# Set node environment to production
-NODE_ENV="production"
+# ── ENVIRONMENT (CRITICAL) ────────────────────────────────────────────
+# This MUST be "production" on the server
+# Without it, Next.js runs in slow development mode
+NODE_ENV=production
+
+# ── SECURITY ──────────────────────────────────────────────────────────
+# Change this to a long random string in production!
+JWT_SECRET="REPLACE_WITH_YOUR_OWN_LONG_RANDOM_SECRET_KEY_HERE"
+
+# ── FRONTEND URL (for CORS) ───────────────────────────────────────────
+# Set this to your domain (no trailing slash)
+FRONTEND_URL=https://yourdomain.com
+```
+
+> 🔑 **Never share your `.env` file publicly or commit it to Git.**
+
+---
+
+## Step 5 — Hostinger Node.js Manager Setup
+
+1. In **hPanel** → **Advanced** → **Node.js**
+2. Configure the Node application:
+   | Setting | Value |
+   |---|---|
+   | **Application root** | `/public_html/backend` |
+   | **Application startup file** | `dist/index.js` |
+   | **Node.js version** | **20.x** (or latest LTS) |
+3. Click **Save**
+
+---
+
+## Step 6 — Install Dependencies & Push Database
+
+Open the **SSH Terminal** (hPanel → Advanced → SSH Access) or use the built-in terminal in the Node.js manager:
+
+```bash
+# Navigate to backend directory
+cd /public_html/backend
+
+# 1. Install production dependencies (auto-generates Prisma Client via postinstall)
+npm install --production
+
+# 2. Push the Prisma schema to create all database tables
+npx prisma db push
+
+# 3. (Optional) Seed the database with initial products and admin user
+npx ts-node prisma/seed.ts
+# OR if ts-node is unavailable:
+# node -e "require('./dist/seed')" 
+# (only works if seed.ts was compiled — compile it separately if needed)
 ```
 
 ---
 
-## 6. Hostinger Node.js Application Manager Setup
+## Step 7 — Start the Application
 
-1. In hPanel, go to **Advanced** > **Node.js**.
-2. Create/edit the Node application for your main domain:
-   *   **App Directory:** `/public_html/backend` *(Points directly to the backend folder)*
-   *   **Startup File:** **`dist/index.js`** *(Compiled Express server)*
-   *   **Node Version:** Choose **Node.js 20** (or latest).
-3. Click **Install** / **Save**.
-4. Once saved, open the terminal console in your hPanel Node.js dashboard (or connect via SSH) and run:
-   ```bash
-   # 1. Install production dependencies and auto-generate Prisma Client
-   npm install --production
+In hPanel → Node.js Manager, click **Start App** (or **Restart** if already running).
 
-   # 2. Push tables and models to Hostinger MySQL Database
-   npx prisma db push
+---
 
-   # 3. Seed initial product catalog and admin credentials
-   npm run prisma:seed
-   ```
-5. Click **Start App** on the hPanel Node.js manager page.
+## Step 8 — Verify the Deployment
 
-Your e-commerce storefront is now live on `https://yourdomain.com/` with API routing running natively on `https://yourdomain.com/api/` under a single process!
+After starting:
+
+| URL | Expected Response |
+|-----|-------------------|
+| `https://yourdomain.com/` | DVYUG storefront loads |
+| `https://yourdomain.com/api/health` | `{"status":"healthy","message":"DVYUG Vedic Wellness API is online"}` |
+| `https://yourdomain.com/api/products` | JSON list of products |
+
+---
+
+## Troubleshooting
+
+| Problem | Likely Cause | Fix |
+|---------|-------------|-----|
+| White screen / 500 error | `NODE_ENV` not set to `production` | Update `.env` → Restart app |
+| `Cannot find module 'next'` | `npm install` not run on server | Run `npm install --production` in `/public_html/backend/` |
+| Database connection error | Wrong `DATABASE_URL` or MySQL not running | Check credentials in `.env`; verify DB exists in hPanel |
+| API returns 401 | `JWT_SECRET` mismatch | Ensure same `JWT_SECRET` is set on server as used to sign tokens |
+| Images not loading | Cloudinary or external CDN blocked | Already fixed — `next.config.ts` allows `https://**` patterns |
+| `prisma db push` fails | Prisma not installed | Run `npm install --production` first (it runs `prisma generate` automatically) |
+
+---
+
+## Architecture Notes
+
+- **No separate `server.js`** at the root is needed for this deployment. The app entry point is `backend/dist/index.js`.
+- The Express server **serves the Next.js frontend directly** using Next.js's custom server API. No separate process or port is needed.
+- **CORS is disabled for same-origin requests** (since frontend and API share the same port). It only activates for external tool access.
