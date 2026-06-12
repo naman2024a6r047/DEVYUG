@@ -20,6 +20,9 @@ frontend/next-build/
 # Backend compiled output
 backend/dist/
 
+# Deploy output
+/deploy-dist/
+
 # OS/IDE files
 .DS_Store
 .vscode/

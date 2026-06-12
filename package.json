@@ -14,7 +14,8 @@
     "build:backend": "npm run build --workspace=dvyug-backend",
     "build:frontend": "npm run build --workspace=frontend",
     "build:all": "npm run build --workspace=frontend && npm run build --workspace=dvyug-backend",
-    "build": "npm run build:all"
+    "build": "npm run build:all",
+    "build:prod": "node scripts/build-deploy.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
