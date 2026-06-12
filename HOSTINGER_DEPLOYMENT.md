@@ -108,7 +108,11 @@ FRONTEND_URL=https://yourdomain.com
    | **Application root** | `/public_html` (or the folder where your domain points) |
    | **Application startup file** | `server.js` |
    | **Node.js version** | **20.x** (or latest LTS) |
-3. Click **Save**
+3. If deploying via GitHub integration, configure your **Build Settings** as follows:
+   - **Build command**: `npm run build:prod`
+   - **Output directory**: `deploy-dist`
+   - **Entry file**: `server.js`
+4. Click **Save**
 
 ---
 
