@@ -3,14 +3,18 @@
   "version": "1.0.0",
   "description": "DVYUG - Divine Essentials for Vedic Yield and Universal Goodness",
   "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
-    "dev:backend": "npm run dev --prefix backend",
-    "dev:frontend": "npm run dev --prefix frontend",
-    "dev": "npm run dev:backend",
-    "build:backend": "npm run build --prefix backend",
-    "build:frontend": "npm run build --prefix frontend",
-    "build:all": "npm run build:frontend && npm run build:backend"
+    "dev:backend": "npm run dev --workspace=dvyug-backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "build:backend": "npm run build --workspace=dvyug-backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:all": "npm run build --workspace=frontend && npm run build --workspace=dvyug-backend",
+    "build": "npm run build:all"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
