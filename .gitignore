@@ -15,10 +15,8 @@ frontend/.env.production
 # NextJS build output
 frontend/.next/
 frontend/out/
-frontend/next-build/
 
 # Backend compiled output
-backend/dist/
 
 # Deploy output
 /deploy-dist/
