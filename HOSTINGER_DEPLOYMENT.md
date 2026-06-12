@@ -105,8 +105,8 @@ FRONTEND_URL=https://yourdomain.com
 2. Configure the Node application:
    | Setting | Value |
    |---|---|
-   | **Application root** | `/public_html/backend` |
-   | **Application startup file** | `dist/index.js` |
+   | **Application root** | `/public_html` (or the folder where your domain points) |
+   | **Application startup file** | `server.js` |
    | **Node.js version** | **20.x** (or latest LTS) |
 3. Click **Save**
 
@@ -117,20 +117,21 @@ FRONTEND_URL=https://yourdomain.com
 Open the **SSH Terminal** (hPanel → Advanced → SSH Access) or use the built-in terminal in the Node.js manager:
 
 ```bash
-# Navigate to backend directory
-cd /public_html/backend
+# Navigate to the root directory
+cd /public_html
 
-# 1. Install production dependencies (auto-generates Prisma Client via postinstall)
-npm install --production
+# 1. Install all dependencies (workspaces will automatically resolve both frontend and backend)
+npm install
 
-# 2. Push the Prisma schema to create all database tables
+# 2. Compile both applications (Next.js and Express backend) on the server
+npm run build
+
+# 3. Push the Prisma schema to create all database tables
+cd backend
 npx prisma db push
 
-# 3. (Optional) Seed the database with initial products and admin user
+# 4. (Optional) Seed the database with initial products and admin user
 npx ts-node prisma/seed.ts
-# OR if ts-node is unavailable:
-# node -e "require('./dist/seed')" 
-# (only works if seed.ts was compiled — compile it separately if needed)
 ```
 
 ---
